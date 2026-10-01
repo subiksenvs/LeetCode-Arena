@@ -60,11 +60,6 @@ npm run dev
 ```
 *Frontend runs on `http://localhost:5173`.*
 
----
-
-## ☁️ Deployment Guide
-
-For complete instructions on deploying the frontend to **GitHub Pages**, backend to **Render**, and database to **Firebase Firestore**, refer to [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
 ---
 
