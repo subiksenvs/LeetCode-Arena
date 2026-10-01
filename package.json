@@ -1,0 +1,18 @@
+{
+  "name": "leetcode-arena",
+  "version": "1.0.0",
+  "description": "LeetCode Arena Full Stack Leaderboard Platform",
+  "private": true,
+  "main": "backend/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "build": "cd backend && npm install",
+    "postinstall": "cd backend && npm install"
+  },
+  "author": "Subiksen V S (subiksenvs)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/subiksenvs/LeetCode-Arena.git"
+  }
+}
