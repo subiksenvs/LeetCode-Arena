@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: leetcode-arena-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: FRONTEND_URL
+        value: https://subiksenvs.github.io
+      - key: FIREBASE_PROJECT_ID
+        value: leetcode-arena-9b0e1
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@leetcode-arena-9b0e1.iam.gserviceaccount.com
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
