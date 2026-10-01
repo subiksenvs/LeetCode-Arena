@@ -8,14 +8,38 @@ declare global {
 }
 
 /**
- * Normalizes header string to match keys
+ * Normalizes header string to lowercase alphanumeric
  */
-const normalizeHeader = (header: string): string => {
-    return header.toString().toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalizeHeader = (header: any): string => {
+    if (header === null || header === undefined) return "";
+    return header.toString().toLowerCase().trim().replace(/[^a-z0-9]/g, "");
 };
 
 /**
- * Parses an Excel or CSV file and extracts { name, regNo, dept, username }
+ * Extracts a clean LeetCode username even if a full profile URL is provided
+ * e.g., "https://leetcode.com/u/john_doe/" -> "john_doe"
+ */
+const extractLeetCodeUsername = (input: string): string => {
+    let clean = input.trim();
+    if (!clean) return "";
+
+    // If it's a URL
+    if (clean.includes("leetcode.com")) {
+        try {
+            // Remove protocol and trailing slash
+            clean = clean.replace(/https?:\/\/(www\.)?leetcode\.com\/(u\/)?/i, "").replace(/\/+$/, "");
+            clean = clean.split("/")[0].split("?")[0].split("#")[0];
+        } catch {
+            // fallback
+        }
+    }
+    // Remove @ prefix if present
+    clean = clean.replace(/^@/, "").trim();
+    return clean;
+};
+
+/**
+ * Parses an Excel or CSV file and accurately extracts ONLY { name, regNo, dept, username }
  */
 export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
     return new Promise((resolve, reject) => {
@@ -30,6 +54,10 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                 }
 
                 const workbook = XLSX.read(data, { type: "array" });
+                if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                    throw new Error("The uploaded Excel workbook contains no sheets.");
+                }
+
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
@@ -38,41 +66,74 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                     throw new Error("The uploaded Excel sheet is empty.");
                 }
 
-                // Detect column keys
-                const sampleRow = rawJson[0];
-                const keys = Object.keys(sampleRow);
+                const keys = Object.keys(rawJson[0]);
 
-                const findKey = (candidates: string[]) => {
-                    return keys.find((key) => {
-                        const normalized = normalizeHeader(key);
-                        return candidates.some((c) => normalized === c || normalized.includes(c));
-                    });
+                // High-accuracy column matching
+                const findBestKey = (exactMatchers: string[], fuzzyMatchers: string[]): string | undefined => {
+                    // Pass 1: Check exact normalized match
+                    for (const key of keys) {
+                        const norm = normalizeHeader(key);
+                        if (exactMatchers.includes(norm)) return key;
+                    }
+                    // Pass 2: Check fuzzy/substring match
+                    for (const key of keys) {
+                        const norm = normalizeHeader(key);
+                        if (fuzzyMatchers.some((f) => norm.includes(f))) return key;
+                    }
+                    return undefined;
                 };
 
-                const usernameKey = findKey(["username", "leetcodeusername", "leetcodeid", "handle", "leetcode", "id"]);
-                const nameKey = findKey(["name", "studentname", "fullname", "displayname"]);
-                const regNoKey = findKey(["regno", "registernumber", "registerno", "rollno", "registrationno", "reg"]);
-                const deptKey = findKey(["dept", "department", "branch", "stream", "section"]);
+                const usernameKey = findBestKey(
+                    ["leetcodeusername", "leetcodeid", "lchandle", "leetcodehandle", "username", "leetcode", "lcu", "lcid", "handle", "profile", "leetcodeurl", "user"],
+                    ["leetcode", "username", "handle"]
+                );
 
-                const users: UserInput[] = rawJson
-                    .map((row) => {
-                        const username = (usernameKey ? row[usernameKey] : "").toString().trim();
-                        const name = (nameKey ? row[nameKey] : "").toString().trim();
-                        const regNo = (regNoKey ? row[regNoKey] : "").toString().trim();
-                        const dept = (deptKey ? row[deptKey] : "").toString().trim();
+                const nameKey = findBestKey(
+                    ["studentname", "name", "fullname", "nameofstudent", "studentfullname", "candidatename", "displayname", "nameofcandidate", "student"],
+                    ["name", "student"]
+                );
 
-                        return {
-                            username,
-                            name: name || username,
-                            displayName: name || username,
-                            regNo,
-                            dept,
-                        };
-                    })
-                    .filter((u) => u.username.length > 0);
+                const regNoKey = findBestKey(
+                    ["regno", "registerno", "registernumber", "registrationno", "registrationnumber", "rollno", "rollnumber", "reg", "htno", "hallticket", "studentid", "idno", "roll"],
+                    ["reg", "roll", "htno", "register"]
+                );
+
+                const deptKey = findBestKey(
+                    ["department", "dept", "branch", "deptname", "departmentname", "stream", "course", "sec", "section"],
+                    ["dept", "department", "branch", "stream"]
+                );
+
+                const userMap = new Map<string, UserInput>();
+
+                for (const row of rawJson) {
+                    const rawUsername = usernameKey ? row[usernameKey]?.toString() || "" : "";
+                    const username = extractLeetCodeUsername(rawUsername);
+
+                    // Skip rows without a valid username
+                    if (!username || username.length === 0) continue;
+
+                    const rawName = nameKey ? (row[nameKey]?.toString() || "").trim() : "";
+                    const rawRegNo = regNoKey ? (row[regNoKey]?.toString() || "").trim() : "";
+                    const rawDept = deptKey ? (row[deptKey]?.toString() || "").trim() : "";
+
+                    // Strictly extract only requested fields
+                    const userRecord: UserInput = {
+                        username: username,
+                        name: rawName || username,
+                        displayName: rawName || username,
+                        regNo: rawRegNo,
+                        dept: rawDept,
+                    };
+
+                    // Deduplicate within the file: matching username, or matching name + dept
+                    const dedupKey = username.toLowerCase();
+                    userMap.set(dedupKey, userRecord);
+                }
+
+                const users = Array.from(userMap.values());
 
                 if (users.length === 0) {
-                    throw new Error("No valid usernames found. Please make sure there is a column for 'Username' or 'LeetCode Username'.");
+                    throw new Error("No valid LeetCode usernames found. Please make sure your sheet has a column for 'LeetCode Username', 'Username', or 'Handle'.");
                 }
 
                 resolve(users);

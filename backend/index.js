@@ -144,6 +144,60 @@ app.get("/api/users", async (req, res) => {
     }
 });
 
+// Helper: Merges new incoming user records into existing list, updating matching records
+const mergeUserRecords = (existingList, incomingList, defaultCreatedBy) => {
+    const result = [...existingList];
+
+    for (const incoming of incomingList) {
+        const cleanUser = {
+            username: (incoming.username || "").trim(),
+            name: (incoming.name || incoming.displayName || incoming.username || "").trim(),
+            displayName: (incoming.displayName || incoming.name || incoming.username || "").trim(),
+            regNo: (incoming.regNo || incoming.reg_no || incoming.registerNumber || "").toString().trim(),
+            dept: (incoming.dept || incoming.department || "").toString().trim(),
+            createdBy: incoming.createdBy || defaultCreatedBy,
+        };
+
+        if (!cleanUser.username) continue;
+
+        // Match based on LeetCode username OR RegNo OR Name+Dept
+        const matchIndex = result.findIndex((existing) => {
+            const sameUsername = existing.username.toLowerCase() === cleanUser.username.toLowerCase();
+            const sameRegNo =
+                Boolean(existing.regNo) &&
+                Boolean(cleanUser.regNo) &&
+                existing.regNo.toLowerCase() === cleanUser.regNo.toLowerCase();
+            const sameNameAndDept =
+                Boolean(existing.name) &&
+                Boolean(cleanUser.name) &&
+                Boolean(existing.dept) &&
+                Boolean(cleanUser.dept) &&
+                existing.name.toLowerCase() === cleanUser.name.toLowerCase() &&
+                existing.dept.toLowerCase() === cleanUser.dept.toLowerCase();
+
+            return sameUsername || sameRegNo || sameNameAndDept;
+        });
+
+        if (matchIndex !== -1) {
+            // Update existing entry with any updated fields
+            result[matchIndex] = {
+                ...result[matchIndex],
+                username: cleanUser.username || result[matchIndex].username,
+                name: cleanUser.name || result[matchIndex].name,
+                displayName: cleanUser.displayName || result[matchIndex].displayName,
+                regNo: cleanUser.regNo || result[matchIndex].regNo,
+                dept: cleanUser.dept || result[matchIndex].dept,
+                createdBy: cleanUser.createdBy || result[matchIndex].createdBy,
+            };
+        } else {
+            // New record
+            result.push(cleanUser);
+        }
+    }
+
+    return result;
+};
+
 // Update all users (e.g. after uploading Excel sheet)
 app.post("/api/users/update-all", async (req, res) => {
     try {
@@ -154,31 +208,27 @@ app.post("/api/users/update-all", async (req, res) => {
 
         const currentUsers = await getStoredUsers(usernames.users || []);
 
-        const sanitizedUsers = users.map((u) => ({
-            username: (u.username || "").trim(),
-            name: (u.name || u.displayName || u.username || "").trim(),
-            displayName: (u.displayName || u.name || u.username || "").trim(),
-            regNo: (u.regNo || u.reg_no || u.registerNumber || "").toString().trim(),
-            dept: (u.dept || u.department || "").toString().trim(),
-            createdBy: u.createdBy || createdBy,
-        })).filter(u => u.username.length > 0);
-
         let finalUsersList = [];
         if (role === "admin") {
-            finalUsersList = sanitizedUsers;
+            finalUsersList = mergeUserRecords(currentUsers, users, createdBy);
         } else {
+            // Regular user: preserve other accounts' records, merge into their own
             const otherUsers = currentUsers.filter(
                 (u) => u.createdBy && u.createdBy.toLowerCase() !== createdBy.toLowerCase()
             );
-            finalUsersList = [...otherUsers, ...sanitizedUsers];
+            const myCurrentUsers = currentUsers.filter(
+                (u) => !u.createdBy || u.createdBy.toLowerCase() === createdBy.toLowerCase()
+            );
+            const myMergedUsers = mergeUserRecords(myCurrentUsers, users, createdBy);
+            finalUsersList = [...otherUsers, ...myMergedUsers];
         }
 
         await saveStoredUsers(finalUsersList);
 
         res.json({
-            message: `Successfully saved ${sanitizedUsers.length} users to leaderboard`,
-            count: sanitizedUsers.length,
-            users: sanitizedUsers,
+            message: `Successfully saved & updated ${users.length} users in leaderboard`,
+            count: finalUsersList.length,
+            users: finalUsersList,
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -255,33 +305,22 @@ app.post("/api/users/add", async (req, res) => {
             return res.status(400).json({ error: "Username is required" });
         }
 
-        const cleanUsername = username.trim();
         const currentUsers = await getStoredUsers(usernames.users || []);
-        const existingIndex = currentUsers.findIndex(
-            (u) => u.username.toLowerCase() === cleanUsername.toLowerCase()
-        );
-
-        const newUser = {
-            username: cleanUsername,
-            name: (name || displayName || cleanUsername).trim(),
-            displayName: (displayName || name || cleanUsername).trim(),
-            regNo: (regNo || "").toString().trim(),
-            dept: (dept || "").toString().trim(),
-            createdBy: createdBy,
-        };
-
-        let updatedUsers = [...currentUsers];
-        if (existingIndex !== -1) {
-            updatedUsers[existingIndex] = newUser;
-        } else {
-            updatedUsers.push(newUser);
-        }
+        const singleIncoming = [{ username, name, regNo, dept, displayName, createdBy }];
+        const updatedUsers = mergeUserRecords(currentUsers, singleIncoming, createdBy);
 
         await saveStoredUsers(updatedUsers);
 
         // Fetch user data to verify and return
-        const userData = await fetchUserDetails(cleanUsername);
-        const formattedData = formatUserData(userData, newUser);
+        const userData = await fetchUserDetails(username.trim());
+        const formattedData = formatUserData(userData, {
+            username: username.trim(),
+            name: name || displayName || username.trim(),
+            displayName: displayName || name || username.trim(),
+            regNo: regNo || "",
+            dept: dept || "",
+            createdBy,
+        });
 
         res.json({
             message: "User added/updated successfully",

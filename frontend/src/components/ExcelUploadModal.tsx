@@ -161,6 +161,7 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                                 ref={fileInputRef}
                                 type="file"
                                 accept=".xlsx,.xls,.csv"
+                                multiple={false}
                                 className="hidden"
                                 onChange={handleFileChange}
                             />
@@ -169,7 +170,7 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                             </div>
                             <div className="text-center">
                                 <p className="text-sm font-bold text-white font-display">
-                                    Click to browse or drag & drop your Excel file
+                                    Click to browse or drag & drop a single Excel file
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     Supports .xlsx, .xls, .csv with columns: Name, Reg No, Dept, LeetCode Username
@@ -186,14 +187,14 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                         </div>
                     )}
 
-                    {/* Preview Table */}
+                    {/* Preview Table with Horizontal & Vertical Scrolling */}
                     {file && parsedUsers.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between bg-black/40 p-3.5 rounded-2xl border border-white/10">
                                 <div className="flex items-center gap-3">
                                     <FileSpreadsheet className="text-emerald-400" size={20} />
                                     <div>
-                                        <div className="text-xs font-bold text-white font-mono">
+                                        <div className="text-xs font-bold text-white font-mono truncate max-w-[200px] sm:max-w-xs">
                                             {file.name}
                                         </div>
                                         <div className="text-[11px] text-gray-400">
@@ -203,35 +204,37 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                                 </div>
                                 <button
                                     onClick={reset}
-                                    className="text-xs text-gray-400 hover:text-rose-400 transition"
+                                    className="text-xs text-gray-400 hover:text-rose-400 transition ml-2 flex-shrink-0"
                                 >
                                     Select another file
                                 </button>
                             </div>
 
-                            <div className="border border-white/10 rounded-2xl overflow-hidden max-h-60 overflow-y-auto">
-                                <table className="w-full text-left text-xs">
-                                    <thead className="bg-black/70 text-gray-400 uppercase sticky top-0 font-mono text-[10px]">
-                                        <tr>
-                                            <th className="px-3.5 py-2">#</th>
-                                            <th className="px-3.5 py-2">Reg No</th>
-                                            <th className="px-3.5 py-2">Name</th>
-                                            <th className="px-3.5 py-2">Dept</th>
-                                            <th className="px-3.5 py-2">LeetCode Username</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5 text-gray-300 bg-black/20">
-                                        {parsedUsers.slice(0, 50).map((u, i) => (
-                                            <tr key={i} className="hover:bg-white/5">
-                                                <td className="px-3.5 py-2 text-gray-600 font-mono">{i + 1}</td>
-                                                <td className="px-3.5 py-2 font-mono text-gray-300">{u.regNo || "-"}</td>
-                                                <td className="px-3.5 py-2 font-medium text-white">{u.name}</td>
-                                                <td className="px-3.5 py-2 text-blue-400 font-semibold">{u.dept || "-"}</td>
-                                                <td className="px-3.5 py-2 font-mono text-emerald-400">{u.username}</td>
+                            <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/40 shadow-inner">
+                                <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                                    <table className="w-full text-left text-xs min-w-[560px]">
+                                        <thead className="bg-slate-900/95 text-gray-400 uppercase sticky top-0 font-mono text-[10px] backdrop-blur-md z-10 border-b border-white/10">
+                                            <tr>
+                                                <th className="px-3.5 py-2.5 w-12">#</th>
+                                                <th className="px-3.5 py-2.5 min-w-[100px]">Reg No</th>
+                                                <th className="px-3.5 py-2.5 min-w-[160px]">Student Name</th>
+                                                <th className="px-3.5 py-2.5 min-w-[90px]">Dept</th>
+                                                <th className="px-3.5 py-2.5 min-w-[160px]">LeetCode Username</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 text-gray-300">
+                                            {parsedUsers.slice(0, 50).map((u, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition">
+                                                    <td className="px-3.5 py-2 text-gray-500 font-mono">{i + 1}</td>
+                                                    <td className="px-3.5 py-2 font-mono text-gray-300">{u.regNo || "-"}</td>
+                                                    <td className="px-3.5 py-2 font-semibold text-white whitespace-nowrap">{u.name}</td>
+                                                    <td className="px-3.5 py-2 text-cyan-400 font-semibold uppercase">{u.dept || "-"}</td>
+                                                    <td className="px-3.5 py-2 font-mono text-emerald-400 font-semibold">{u.username}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             {parsedUsers.length > 50 && (
                                 <p className="text-[11px] text-gray-500 text-center font-mono">
