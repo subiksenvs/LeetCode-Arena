@@ -5,9 +5,7 @@ on:
     branches:
       - main
       - master
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
