@@ -148,8 +148,8 @@ export const parseExcelFile = async (file: File): Promise<ParsedExcelResult> => 
 
                     const userRecord: UserInput = {
                         username: username,
-                        name: rawName || username,
-                        displayName: rawName || username,
+                        name: rawName,
+                        displayName: rawName,
                         regNo: rawRegNo,
                         dept: rawDept,
                     };

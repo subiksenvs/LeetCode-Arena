@@ -59,8 +59,8 @@ const formatUserData = (userData, userMeta = null) => {
     let createdBy = "";
 
     if (typeof userMeta === "string") {
-        displayName = userMeta;
-        name = userMeta;
+        displayName = "";
+        name = "";
     } else if (userMeta && typeof userMeta === "object") {
         name = userMeta.name || userMeta.displayName || "";
         displayName = userMeta.displayName || userMeta.name || "";
@@ -73,12 +73,12 @@ const formatUserData = (userData, userMeta = null) => {
         const fallbackUsername = (typeof userMeta === "string" ? userMeta : userMeta?.username) || "Unknown";
         return {
             username: fallbackUsername,
-            name: name || fallbackUsername,
-            displayName: displayName || name || fallbackUsername,
+            name: name || "",
+            displayName: displayName || name || "",
             regNo: regNo,
             dept: dept,
             createdBy: createdBy,
-            realName: name || "",
+            realName: userData?.matchedUser?.profile?.realName || "",
             totalSolved: 0,
             totalQuestions: 0,
             easySolved: 0,
@@ -108,12 +108,12 @@ const formatUserData = (userData, userMeta = null) => {
     }
     return {
         username: userData.matchedUser.username,
-        name: name || userData.matchedUser.profile?.realName || userData.matchedUser.username,
-        displayName: displayName || userData.matchedUser.profile?.realName || userData.matchedUser.username,
+        name: name || userData.matchedUser.profile?.realName || "",
+        displayName: displayName || name || userData.matchedUser.profile?.realName || "",
         regNo: regNo,
         dept: dept,
         createdBy: createdBy,
-        realName: userData.matchedUser.profile?.realName,
+        realName: userData.matchedUser.profile?.realName || "",
         totalSolved: userData.matchedUser.submitStats?.acSubmissionNum?.[0]?.count || 0,
         totalQuestions: userData.allQuestionsCount?.[0]?.count || 0,
         easySolved: userData.matchedUser.submitStats?.acSubmissionNum?.[1]?.count || 0,

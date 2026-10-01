@@ -303,18 +303,32 @@ export const LeaderboardTable: React.FC<Props> = ({
                                         #{index + 1}
                                     </span>
                                     <div>
-                                        <div className="font-bold text-white text-base font-display group-hover:text-emerald-400 transition-colors">
-                                            {user.name || user.displayName || user.username}
-                                        </div>
-                                        <a
-                                            href={`https://leetcode.com/${user.username}/`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-gray-400 hover:text-emerald-400 font-mono inline-flex items-center gap-1 transition-colors"
-                                        >
-                                            @{user.username}
-                                            <ExternalLink size={10} />
-                                        </a>
+                                        {user.name ? (
+                                            <>
+                                                <div className="font-bold text-white text-base font-display group-hover:text-emerald-400 transition-colors">
+                                                    {user.name}
+                                                </div>
+                                                <a
+                                                    href={`https://leetcode.com/${user.username}/`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-gray-400 hover:text-emerald-400 font-mono inline-flex items-center gap-1 transition-colors"
+                                                >
+                                                    @{user.username}
+                                                    <ExternalLink size={10} />
+                                                </a>
+                                            </>
+                                        ) : (
+                                            <a
+                                                href={`https://leetcode.com/${user.username}/`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-base font-bold text-emerald-400 hover:text-emerald-300 font-mono inline-flex items-center gap-1 transition-colors"
+                                            >
+                                                @{user.username}
+                                                <ExternalLink size={12} />
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
 
@@ -525,25 +539,46 @@ export const LeaderboardTable: React.FC<Props> = ({
                                         {/* Name & Username */}
                                         <td className="px-5 py-4 whitespace-nowrap">
                                             <div>
-                                                <div className="font-bold text-white text-sm font-display group-hover:text-emerald-400 transition-colors">
-                                                    {user.name || user.displayName || user.username}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <a
-                                                        href={`https://leetcode.com/${user.username}/`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs text-gray-400 hover:text-emerald-400 inline-flex items-center gap-1 transition-colors font-mono mt-0.5"
-                                                    >
-                                                        @{user.username}
-                                                        <ExternalLink size={10} />
-                                                    </a>
-                                                    {isAdmin && user.createdBy && (
-                                                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-gray-400">
-                                                            by {user.createdBy}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                {user.name ? (
+                                                    <>
+                                                        <div className="font-bold text-white text-sm font-display group-hover:text-emerald-400 transition-colors">
+                                                            {user.name}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <a
+                                                                href={`https://leetcode.com/${user.username}/`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-xs text-gray-400 hover:text-emerald-400 inline-flex items-center gap-1 transition-colors font-mono mt-0.5"
+                                                            >
+                                                                @{user.username}
+                                                                <ExternalLink size={10} />
+                                                            </a>
+                                                            {isAdmin && user.createdBy && (
+                                                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-gray-400">
+                                                                    by {user.createdBy}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <a
+                                                            href={`https://leetcode.com/${user.username}/`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-sm font-mono font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                                                        >
+                                                            @{user.username}
+                                                            <ExternalLink size={12} />
+                                                        </a>
+                                                        {isAdmin && user.createdBy && (
+                                                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-gray-400">
+                                                                by {user.createdBy}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
 

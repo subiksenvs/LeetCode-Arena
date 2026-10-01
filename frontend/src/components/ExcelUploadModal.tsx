@@ -284,8 +284,8 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                                                 <User size={13} />
                                                 <span className="text-[11px]">Name</span>
                                             </div>
-                                            <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.name || "Defaulted to Username"}>
-                                                {detectedCols.name ? `"${detectedCols.name}"` : "Auto (from Username)"}
+                                            <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.name || "Not in sheet"}>
+                                                {detectedCols.name ? `"${detectedCols.name}"` : "Not in sheet"}
                                             </div>
                                             <div className="text-[9px] text-sky-400/80 mt-0.5">
                                                 {detectedCols.name ? "Distinct Column" : "Optional"}

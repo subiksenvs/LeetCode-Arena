@@ -88,18 +88,32 @@ export const PodiumCards: React.FC<Props> = ({ data }) => {
                                         #{item.rank}
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-white text-lg font-display group-hover:text-emerald-400 transition-colors">
-                                            {user.name || user.displayName || user.username}
-                                        </h3>
-                                        <a
-                                            href={`https://leetcode.com/${user.username}/`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-gray-400 hover:text-emerald-400 inline-flex items-center gap-1 font-mono transition-colors"
-                                        >
-                                            @{user.username}
-                                            <ExternalLink size={10} />
-                                        </a>
+                                        {user.name ? (
+                                            <>
+                                                <h3 className="font-bold text-white text-lg font-display group-hover:text-emerald-400 transition-colors">
+                                                    {user.name}
+                                                </h3>
+                                                <a
+                                                    href={`https://leetcode.com/${user.username}/`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-gray-400 hover:text-emerald-400 inline-flex items-center gap-1 font-mono transition-colors"
+                                                >
+                                                    @{user.username}
+                                                    <ExternalLink size={10} />
+                                                </a>
+                                            </>
+                                        ) : (
+                                            <a
+                                                href={`https://leetcode.com/${user.username}/`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-base font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 font-mono transition-colors"
+                                            >
+                                                @{user.username}
+                                                <ExternalLink size={12} />
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                                 <div className={`p-2 rounded-xl bg-white/5 border border-white/10 ${item.iconColor}`}>
