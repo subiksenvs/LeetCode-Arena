@@ -26,24 +26,7 @@ export const useLeetCode = (authUser?: AuthUser | null) => {
     const [error, setError] = useState<string | null>(null);
     const [serverChecked, setServerChecked] = useState(false);
 
-    const checkServer = async () => {
-        try {
-            const response = await fetch(`${API_URL}/`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            setServerChecked(true);
-            return true;
-        } catch (err) {
-            setError(
-                "Failed to connect to the LeetCode Leaderboard backend server. Please make sure the backend is running on http://localhost:3000."
-            );
-            setLoading(false);
-            return false;
-        }
-    };
-
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isRetry = false) => {
         if (!authUser) {
             setUserData([]);
             setLoading(false);
@@ -51,8 +34,7 @@ export const useLeetCode = (authUser?: AuthUser | null) => {
         }
 
         setLoading(true);
-        const serverRunning = await checkServer();
-        if (!serverRunning) return;
+        setError(null);
 
         try {
             const queryParams = new URLSearchParams({
@@ -60,22 +42,31 @@ export const useLeetCode = (authUser?: AuthUser | null) => {
                 role: authUser.role || "user",
             });
 
-            const response = await fetch(`${API_URL}/api/users?${queryParams.toString()}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout for Render cold starts
+
+            const response = await fetch(`${API_URL}/api/users?${queryParams.toString()}`, {
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Server returned HTTP ${response.status}`);
             }
+
             const data = await response.json();
             setUserData(data.usersData as UserData[]);
-            if (!data.totalUsers || data.totalUsers === 0 || data.fetchedUsers > 0) {
-                setError(null);
-            } else {
-                setError(
-                    "Failed to fetch LeetCode data. Please check your internet connection and LeetCode API status."
-                );
-            }
+            setServerChecked(true);
+            setError(null);
         } catch (err: any) {
+            if (!isRetry) {
+                // If first attempt fails (e.g. Render spin-up cold start), retry once after a short delay
+                console.warn("Retrying fetch after potential server cold start...");
+                setTimeout(() => fetchData(true), 3000);
+                return;
+            }
             setError(
-                err.message || "An unexpected error occurred while fetching users."
+                `Unable to connect to backend server (${API_URL}). If using free tier Render hosting, please wait 30 seconds for the cloud server to spin up and refresh.`
             );
         } finally {
             setLoading(false);
@@ -86,5 +77,5 @@ export const useLeetCode = (authUser?: AuthUser | null) => {
         fetchData();
     }, [fetchData]);
 
-    return { userData, setUserData, loading, error, serverChecked, refresh: fetchData, apiUrl: API_URL };
+    return { userData, setUserData, loading, error, serverChecked, refresh: () => fetchData(false), apiUrl: API_URL };
 };
