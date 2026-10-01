@@ -25,9 +25,9 @@ This guide walks you through deploying your **LeetCode Leaderboard Arena**:
 
 1. Push your project to your GitHub repository.
 2. Go to [Render.com](https://dashboard.render.com/) and click **New +** ➔ **Web Service**.
-3. Connect your GitHub repository.
+3. Connect your GitHub repository (`LeetCode-Arena`).
 4. Fill in the settings:
-   - **Name**: `leetcode-leaderboard-backend`
+   - **Name**: `leetcode-arena-backend`
    - **Root Directory**: `backend`
    - **Environment**: `Node`
    - **Build Command**: `npm install`
@@ -37,11 +37,11 @@ This guide walks you through deploying your **LeetCode Leaderboard Arena**:
    | Key | Value | Notes |
    |---|---|---|
    | `PORT` | `3000` | Port for Express |
-   | `FIREBASE_PROJECT_ID` | `<your-project-id>` | From your Firebase `.json` |
-   | `FIREBASE_CLIENT_EMAIL` | `<your-client-email>` | From your Firebase `.json` |
-   | `FIREBASE_PRIVATE_KEY` | `"-----BEGIN PRIVATE KEY-----\n..."` | From your Firebase `.json` (include quotes & full key) |
+   | `FIREBASE_PROJECT_ID` | `leetcode-arena-9b0e1` | From your Firebase Project |
+   | `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk-fbsvc@leetcode-arena-9b0e1.iam.gserviceaccount.com` | From your Firebase `.json` |
+   | `FIREBASE_PRIVATE_KEY` | `"-----BEGIN PRIVATE KEY-----\n..."` | From your Firebase `.json` |
 6. Click **Create Web Service**.
-7. Once deployed, copy your Render backend URL (e.g. `https://leetcode-leaderboard-backend.onrender.com`).
+7. Once deployed, copy your Render backend URL (e.g. `https://leetcode-arena-backend.onrender.com`).
 
 ---
 

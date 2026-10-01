@@ -1,7 +1,7 @@
 {
-    "name": "backend",
+    "name": "leetcode-arena-backend",
     "version": "1.0.0",
-    "description": "",
+    "description": "LeetCode Arena Backend API",
     "main": "index.js",
     "type": "module",
     "scripts": {
@@ -11,7 +11,7 @@
     "author": "Subiksen V S (subiksenvs)",
     "repository": {
         "type": "git",
-        "url": "https://github.com/subiksenvs/LeetCode-LeaderBoard.git"
+        "url": "https://github.com/subiksenvs/LeetCode-Arena.git"
     },
     "dependencies": {
         "backend": "file:",

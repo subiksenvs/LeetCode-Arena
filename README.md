@@ -40,8 +40,8 @@ Developed & Architected by **[Subiksen V S](https://github.com/subiksenvs)**.
 
 ### 1. Clone Repository
 ```sh
-git clone https://github.com/subiksenvs/LeetCode-LeaderBoard.git
-cd LeetCode-LeaderBoard
+git clone https://github.com/subiksenvs/LeetCode-Arena.git
+cd LeetCode-Arena
 ```
 
 ### 2. Backend Setup
