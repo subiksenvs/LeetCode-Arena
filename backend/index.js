@@ -212,12 +212,13 @@ app.post("/api/users/update-all", async (req, res) => {
         if (role === "admin") {
             finalUsersList = mergeUserRecords(currentUsers, users, createdBy);
         } else {
-            // Regular user: preserve other accounts' records, merge into their own
+            // Regular user: strictly preserve all admin records and other users' records
+            const requester = (createdBy || "user").toLowerCase();
             const otherUsers = currentUsers.filter(
-                (u) => u.createdBy && u.createdBy.toLowerCase() !== createdBy.toLowerCase()
+                (u) => !u.createdBy || u.createdBy.toLowerCase() !== requester || u.createdBy.toLowerCase() === "admin"
             );
             const myCurrentUsers = currentUsers.filter(
-                (u) => !u.createdBy || u.createdBy.toLowerCase() === createdBy.toLowerCase()
+                (u) => u.createdBy && u.createdBy.toLowerCase() === requester && u.createdBy.toLowerCase() !== "admin"
             );
             const myMergedUsers = mergeUserRecords(myCurrentUsers, users, createdBy);
             finalUsersList = [...otherUsers, ...myMergedUsers];
@@ -248,17 +249,21 @@ app.post("/api/users/delete", async (req, res) => {
         let filteredUsers = [];
 
         if (role === "admin") {
+            // Admin can delete from global list
             filteredUsers = currentUsers.filter(
                 (u) => u.username.toLowerCase() !== cleanUsername
             );
         } else {
-            filteredUsers = currentUsers.filter(
-                (u) =>
-                    !(
-                        u.username.toLowerCase() === cleanUsername &&
-                        (!u.createdBy || (createdBy && u.createdBy.toLowerCase() === createdBy.toLowerCase()))
-                    )
-            );
+            // Non-admin user can ONLY delete records they personally created (NEVER admin records or default records)
+            const requester = (createdBy || "").toLowerCase();
+            filteredUsers = currentUsers.filter((u) => {
+                const isMatch = u.username.toLowerCase() === cleanUsername;
+                if (!isMatch) return true; // keep other usernames
+
+                // Only delete if created by this specific user and not admin
+                const isCreatedByRequester = u.createdBy && u.createdBy.toLowerCase() === requester && u.createdBy.toLowerCase() !== "admin";
+                return !isCreatedByRequester; // keep if created by admin or someone else
+            });
         }
 
         await saveStoredUsers(filteredUsers);
@@ -282,8 +287,10 @@ app.post("/api/users/clear-all", async (req, res) => {
         if (role === "admin") {
             await saveStoredUsers([]);
         } else if (createdBy) {
+            const requester = createdBy.toLowerCase();
+            // Non-admin clear only removes their own records, strictly preserving admin and other users' records
             const remaining = currentUsers.filter(
-                (u) => u.createdBy && u.createdBy.toLowerCase() !== createdBy.toLowerCase()
+                (u) => !u.createdBy || u.createdBy.toLowerCase() !== requester || u.createdBy.toLowerCase() === "admin"
             );
             await saveStoredUsers(remaining);
         }
@@ -300,14 +307,29 @@ app.post("/api/users/clear-all", async (req, res) => {
 // Add a single user
 app.post("/api/users/add", async (req, res) => {
     try {
-        const { username, name, regNo, dept, displayName, createdBy = "admin" } = req.body;
+        const { username, name, regNo, dept, displayName, createdBy = "admin", role = "user" } = req.body;
         if (!username) {
             return res.status(400).json({ error: "Username is required" });
         }
 
         const currentUsers = await getStoredUsers(usernames.users || []);
-        const singleIncoming = [{ username, name, regNo, dept, displayName, createdBy }];
-        const updatedUsers = mergeUserRecords(currentUsers, singleIncoming, createdBy);
+        let updatedUsers = [];
+
+        if (role === "admin") {
+            const singleIncoming = [{ username, name: name || "", regNo: regNo || "", dept: dept || "", displayName: displayName || name || "", createdBy: "admin" }];
+            updatedUsers = mergeUserRecords(currentUsers, singleIncoming, "admin");
+        } else {
+            const userCreatedBy = createdBy || "user";
+            const otherUsers = currentUsers.filter(
+                (u) => !u.createdBy || u.createdBy.toLowerCase() !== userCreatedBy.toLowerCase() || u.createdBy.toLowerCase() === "admin"
+            );
+            const myCurrentUsers = currentUsers.filter(
+                (u) => u.createdBy && u.createdBy.toLowerCase() === userCreatedBy.toLowerCase() && u.createdBy.toLowerCase() !== "admin"
+            );
+            const singleIncoming = [{ username, name: name || "", regNo: regNo || "", dept: dept || "", displayName: displayName || name || "", createdBy: userCreatedBy }];
+            const myMergedUsers = mergeUserRecords(myCurrentUsers, singleIncoming, userCreatedBy);
+            updatedUsers = [...otherUsers, ...myMergedUsers];
+        }
 
         await saveStoredUsers(updatedUsers);
 
@@ -315,11 +337,11 @@ app.post("/api/users/add", async (req, res) => {
         const userData = await fetchUserDetails(username.trim());
         const formattedData = formatUserData(userData, {
             username: username.trim(),
-            name: name || displayName || username.trim(),
-            displayName: displayName || name || username.trim(),
+            name: name || "",
+            displayName: displayName || name || "",
             regNo: regNo || "",
             dept: dept || "",
-            createdBy,
+            createdBy: role === "admin" ? "admin" : createdBy,
         });
 
         res.json({
