@@ -261,9 +261,6 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                                         <span className="font-semibold uppercase tracking-wider text-[10px] text-gray-300">
                                             Identified Column Mappings
                                         </span>
-                                        <span className="text-emerald-400/90 font-mono text-[10px]">
-                                            ✓ Distinct mapping verified
-                                        </span>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         {/* Username Mapping */}
@@ -275,48 +272,48 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                                             <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.username || ""}>
                                                 "{detectedCols.username}"
                                             </div>
-                                            <div className="text-[9px] text-emerald-400/80 mt-0.5">Required · Matched</div>
+                                            <div className="text-[9px] text-emerald-400 font-semibold mt-0.5">Matched</div>
                                         </div>
 
                                         {/* Name Mapping */}
-                                        <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs">
-                                            <div className="flex items-center gap-1.5 text-sky-400 font-bold mb-1">
+                                        <div className={`p-2.5 rounded-xl text-xs border ${detectedCols.name ? "bg-sky-500/10 border-sky-500/20" : "bg-white/[0.02] border-white/10"}`}>
+                                            <div className={`flex items-center gap-1.5 font-bold mb-1 ${detectedCols.name ? "text-sky-400" : "text-gray-400"}`}>
                                                 <User size={13} />
                                                 <span className="text-[11px]">Name</span>
                                             </div>
                                             <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.name || "Not in sheet"}>
                                                 {detectedCols.name ? `"${detectedCols.name}"` : "Not in sheet"}
                                             </div>
-                                            <div className="text-[9px] text-sky-400/80 mt-0.5">
-                                                {detectedCols.name ? "Distinct Column" : "Optional"}
+                                            <div className={`text-[9px] font-semibold mt-0.5 ${detectedCols.name ? "text-emerald-400" : "text-gray-400"}`}>
+                                                {detectedCols.name ? "Matched" : "Not Matched"}
                                             </div>
                                         </div>
 
                                         {/* Reg No Mapping */}
-                                        <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs">
-                                            <div className="flex items-center gap-1.5 text-purple-400 font-bold mb-1">
+                                        <div className={`p-2.5 rounded-xl text-xs border ${detectedCols.regNo ? "bg-purple-500/10 border-purple-500/20" : "bg-white/[0.02] border-white/10"}`}>
+                                            <div className={`flex items-center gap-1.5 font-bold mb-1 ${detectedCols.regNo ? "text-purple-400" : "text-gray-400"}`}>
                                                 <Hash size={13} />
                                                 <span className="text-[11px]">Reg No</span>
                                             </div>
                                             <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.regNo || "Not specified"}>
                                                 {detectedCols.regNo ? `"${detectedCols.regNo}"` : "Not in sheet"}
                                             </div>
-                                            <div className="text-[9px] text-purple-400/80 mt-0.5">
-                                                {detectedCols.regNo ? "Distinct Column" : "Optional"}
+                                            <div className={`text-[9px] font-semibold mt-0.5 ${detectedCols.regNo ? "text-emerald-400" : "text-gray-400"}`}>
+                                                {detectedCols.regNo ? "Matched" : "Not Matched"}
                                             </div>
                                         </div>
 
                                         {/* Dept Mapping */}
-                                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
-                                            <div className="flex items-center gap-1.5 text-amber-400 font-bold mb-1">
+                                        <div className={`p-2.5 rounded-xl text-xs border ${detectedCols.dept ? "bg-amber-500/10 border-amber-500/20" : "bg-white/[0.02] border-white/10"}`}>
+                                            <div className={`flex items-center gap-1.5 font-bold mb-1 ${detectedCols.dept ? "text-amber-400" : "text-gray-400"}`}>
                                                 <Building2 size={13} />
                                                 <span className="text-[11px]">Department</span>
                                             </div>
                                             <div className="font-mono text-[11px] text-white font-semibold truncate" title={detectedCols.dept || "Not specified"}>
                                                 {detectedCols.dept ? `"${detectedCols.dept}"` : "Not in sheet"}
                                             </div>
-                                            <div className="text-[9px] text-amber-400/80 mt-0.5">
-                                                {detectedCols.dept ? "Distinct Column" : "Optional"}
+                                            <div className={`text-[9px] font-semibold mt-0.5 ${detectedCols.dept ? "text-emerald-400" : "text-gray-400"}`}>
+                                                {detectedCols.dept ? "Matched" : "Not Matched"}
                                             </div>
                                         </div>
                                     </div>
