@@ -1,7 +1,11 @@
 export interface UserData {
     username: string;
+    name?: string;
     displayName: string;
-    realName: string;
+    regNo?: string;
+    dept?: string;
+    createdBy?: string;
+    realName?: string;
     totalSolved: number;
     totalQuestions: number;
     easySolved: number;
@@ -14,5 +18,14 @@ export interface UserData {
     ranking: number;
     currentStreak: number;
     solvedToday: boolean;
-    activeBadge: { displayName: string; icon: string };
+    activeBadge?: { displayName: string; icon: string } | null;
+}
+
+export interface UserInput {
+    username: string;
+    name?: string;
+    displayName?: string;
+    regNo?: string;
+    dept?: string;
+    createdBy?: string;
 }

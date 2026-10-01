@@ -1,3 +1,5 @@
-# LeetCode-LeaderBoard
+# ⚡ LeetCode Arena — Frontend
 
-[Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/nasr7322/LeetCode-LeaderBoard)
+React + TypeScript + Vite + Tailwind CSS dashboard for LeetCode Leaderboard.
+
+Developed by **[Subiksen V S](https://github.com/subiksenvs)**.

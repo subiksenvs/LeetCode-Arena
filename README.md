@@ -1,61 +1,80 @@
-# LeetCode-LeaderBoard 🚀
+# ⚡ LeetCode Arena — Realtime Leaderboard & Analytics
 
-LeetCode-LeaderBoard is a web application designed to help you and your friends stay motivated while solving LeetCode problems.
-It makes tracking progress competitive and fun by showcasing users' LeetCode statistics in a sortable, interactive leaderboard.
+A futuristic, full-stack real-time competitive programming leaderboard and analytics dashboard for tracking LeetCode performance, problem-solving streaks, and department-level statistics.
 
-The app fetches real-time data from the LeetCode API and presents it in an intuitive, user-friendly interface with animations and responsive design. 🌟
+Developed & Architected by **[Subiksen V S](https://github.com/subiksenvs)**.
 
-![LeetCode Leaderboard UI](./images/Ui.png)
+---
 
-## Features
+## 🌟 Key Features
 
-- Displays LeetCode user statistics, including:
-    - Active badge.
-    - Total problems solved.
-    - Global ranking.
-    - Acceptance rate.
-    - Current streak.
-    - Progress per problem difficulty.
-- Sort the leaderboard by different criteria.
-- Responsive design and animations with Tailwind CSS.
+- **⚡ Live LeetCode Sync**: Fetches real-time statistics (total solved, difficulty breakdown, acceptance rates, global ranking, badges, and streaks) directly from LeetCode.
+- **🏆 Multi-View Leaderboard**:
+  - **Table View**: Compact, sortable view with department filtering and search.
+  - **Cards View**: Grid view showcasing podium badges and streak progress.
+  - **Department Analytics**: Department-level breakdown with total problems solved and average acceptance stats.
+- **🥇 Champions Podium**: Highlight top 3 problem solvers with gold, silver, and bronze podium cards.
+- **📊 Excel / CSV Ingestion & Export**:
+  - Batch upload student lists via `.xlsx` or `.csv` (Name, Register No, Department, Username).
+  - One-click export of the complete leaderboard data with full statistics into formatted Excel spreadsheets.
+- **🔐 Role-Based Access Control**:
+  - **Admin Control Panel**: View, manage, and synchronize records across all accounts.
+  - **User Accounts**: Manage individual batches and track dedicated student lists.
+- **🔥 Firebase Firestore Cloud Persistence**: Real-time cloud storage powered by Firebase Firestore.
+- **🎨 Cyberpunk Dark Aesthetic**: Glassmorphism, neon accents, and smooth animations.
 
-## Installation
+---
 
-1. Clone the repository:
-    ```sh
-    gh repo clone nasr7322/LeetCode-LeaderBoard
-    ```
+## 🛠️ Tech Stack
 
-2. Update the usernames you want to track in the [users.js](backend/data/users.js) file:
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, SheetJS
+- **Backend**: Node.js, Express, Firebase Admin SDK, node-fetch
+- **Database**: Firebase Cloud Firestore
+- **Hosting**:
+  - Frontend: GitHub Pages (Automated with GitHub Actions)
+  - Backend: Render Web Service
 
-3. Navigate to the backend folder, install dependencies and run the server:
-    ```sh
-    cd backend
-    npm install
-    npm start
-    ```
+---
 
-4. Navigate to the frontend folder, install dependencies and run the app:
-    ```sh
-    cd ../frontend
-    npm install
-    npm start
-    ```
+## 🚀 Quick Start (Local Setup)
 
-5. Open your browser and navigate to `http://localhost:5173`.
+### 1. Clone Repository
+```sh
+git clone https://github.com/subiksenvs/LeetCode-LeaderBoard.git
+cd LeetCode-LeaderBoard
+```
 
-## How It Works
+### 2. Backend Setup
+```sh
+cd backend
+npm install
+npm start
+```
+*Backend runs on `http://localhost:3000`.*
 
-Our project utilizes Vite React for the frontend and Express for the backend server, both hosted on Vercel.
-The application fetches real-time user statistics from the LeetCode GraphQL API `https://leetcode.com/graphql/` to ensure up-to-date leaderboard rankings.
+### 3. Frontend Setup
+```sh
+cd ../frontend
+npm install
+npm run dev
+```
+*Frontend runs on `http://localhost:5173`.*
 
-## Hosting
+---
 
-[![Static Badge](https://img.shields.io/badge/Hosted_on-Vercel-black%3Flogo%3Dvercel)](https://leet-code-leader-board.vercel.app/)
+## ☁️ Deployment Guide
 
-## Contributing
-Contributions are welcome! If you’d like to contribute, please fork the repository, create a new branch for your changes, and submit a pull request. For major changes, please open an issue first to discuss what you’d like to change.
+For complete instructions on deploying the frontend to **GitHub Pages**, backend to **Render**, and database to **Firebase Firestore**, refer to [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
-## License
+---
+
+## 👤 Author & Copyright
+
+- **Lead Developer**: **Subiksen V S** ([@subiksenvs](https://github.com/subiksenvs))
+- **Copyright**: © 2026 Subiksen V S. All Rights Reserved.
+
+---
+
+## 📄 License
 
 This project is licensed under the [MIT License](./LICENSE).
