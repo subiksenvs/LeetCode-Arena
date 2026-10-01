@@ -324,44 +324,32 @@ export const ExcelUploadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
                             )}
 
                             {/* Inner Scroll Table ONLY - container will NOT scroll horizontally */}
-                            <div className="space-y-1.5">
-                                <div className="text-[10px] text-gray-400 flex items-center justify-between px-1">
-                                    <span>Preview Extracted Records (First 50 rows)</span>
-                                    <span className="sm:hidden text-gray-500">⇄ Swipe table horizontally</span>
-                                </div>
-                                <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/40 shadow-inner">
-                                    <div className="overflow-x-auto max-h-60 overflow-y-auto">
-                                        <table className="w-full text-left text-xs min-w-[560px]">
-                                            <thead className="bg-slate-900/95 text-gray-400 uppercase sticky top-0 font-mono text-[10px] backdrop-blur-md z-10 border-b border-white/10">
-                                                <tr>
-                                                    <th className="px-3.5 py-2.5 w-12">#</th>
-                                                    <th className="px-3.5 py-2.5 min-w-[110px]">Reg No</th>
-                                                    <th className="px-3.5 py-2.5 min-w-[160px]">Student Name</th>
-                                                    <th className="px-3.5 py-2.5 min-w-[90px]">Dept</th>
-                                                    <th className="px-3.5 py-2.5 min-w-[160px]">LeetCode Username</th>
+                            <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/40 shadow-inner">
+                                <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                                    <table className="w-full text-left text-xs min-w-[560px]">
+                                        <thead className="bg-slate-900/95 text-gray-400 uppercase sticky top-0 font-mono text-[10px] backdrop-blur-md z-10 border-b border-white/10">
+                                            <tr>
+                                                <th className="px-3.5 py-2.5 w-12">#</th>
+                                                <th className="px-3.5 py-2.5 min-w-[110px]">Reg No</th>
+                                                <th className="px-3.5 py-2.5 min-w-[160px]">Student Name</th>
+                                                <th className="px-3.5 py-2.5 min-w-[90px]">Dept</th>
+                                                <th className="px-3.5 py-2.5 min-w-[160px]">LeetCode Username</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 text-gray-300">
+                                            {parsedUsers.slice(0, 50).map((u, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition">
+                                                    <td className="px-3.5 py-2 text-gray-500 font-mono">{i + 1}</td>
+                                                    <td className="px-3.5 py-2 font-mono text-gray-300">{u.regNo || "-"}</td>
+                                                    <td className="px-3.5 py-2 font-semibold text-white whitespace-nowrap">{u.name || "-"}</td>
+                                                    <td className="px-3.5 py-2 text-cyan-400 font-semibold uppercase">{u.dept || "-"}</td>
+                                                    <td className="px-3.5 py-2 font-mono text-emerald-400 font-semibold">{u.username}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5 text-gray-300">
-                                                {parsedUsers.slice(0, 50).map((u, i) => (
-                                                    <tr key={i} className="hover:bg-white/5 transition">
-                                                        <td className="px-3.5 py-2 text-gray-500 font-mono">{i + 1}</td>
-                                                        <td className="px-3.5 py-2 font-mono text-gray-300">{u.regNo || "-"}</td>
-                                                        <td className="px-3.5 py-2 font-semibold text-white whitespace-nowrap">{u.name}</td>
-                                                        <td className="px-3.5 py-2 text-cyan-400 font-semibold uppercase">{u.dept || "-"}</td>
-                                                        <td className="px-3.5 py-2 font-mono text-emerald-400 font-semibold">{u.username}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-
-                            {parsedUsers.length > 50 && (
-                                <p className="text-[11px] text-gray-500 text-center font-mono">
-                                    ...and {parsedUsers.length - 50} more students
-                                </p>
-                            )}
                         </div>
                     )}
 
