@@ -15,6 +15,7 @@ build/
 backend/.env
 backend/serviceAccountKey.json
 serviceAccountKey.json
+backend/data/accounts.json
 *.pem
 
 # Logs

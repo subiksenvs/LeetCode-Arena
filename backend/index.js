@@ -15,8 +15,19 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "*";
 
 const app = express();
+app.disable("x-powered-by");
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    next();
+});
+
 app.use(cors({ origin: "*" }));
-app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.json({ limit: "10mb" }));
 
 // Auth Routes: Signup
 app.post("/api/auth/signup", async (req, res) => {

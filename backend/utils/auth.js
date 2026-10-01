@@ -5,13 +5,16 @@ export const hashPassword = (password) => {
     return crypto.createHash("sha256").update(password).digest("hex");
 };
 
+const defaultAdminPassword = process.env.ADMIN_PASSWORD || "admin@123";
+const defaultAdminUsername = (process.env.ADMIN_USERNAME || "admin").toLowerCase();
+
 // Default seed admin
 export const ADMIN_DEFAULT = {
     id: "admin-root-id",
-    username: "admin",
+    username: defaultAdminUsername,
     name: "Admin",
     role: "admin",
-    passwordHash: hashPassword("admin@123"),
+    passwordHash: hashPassword(defaultAdminPassword),
     createdAt: "2026-10-01T00:00:00.000Z",
 };
 
