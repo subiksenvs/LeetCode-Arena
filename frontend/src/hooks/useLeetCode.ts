@@ -2,7 +2,23 @@ import { useEffect, useState, useCallback } from "react";
 import { UserData } from "../types/leetcode";
 import { AuthUser } from "../types/auth";
 
-export const API_URL = import.meta.env.VITE_API_KEY || "http://localhost:3000";
+export const getApiUrl = (): string => {
+    const envUrl = import.meta.env.VITE_API_KEY || import.meta.env.VITE_API_URL;
+    if (envUrl && typeof envUrl === "string" && envUrl.trim() !== "") {
+        return envUrl.trim().replace(/\/$/, "");
+    }
+    // If accessing from GitHub Pages, mobile phone, or non-localhost domain, use Render cloud backend
+    if (
+        typeof window !== "undefined" &&
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1"
+    ) {
+        return "https://leetcode-arena-backend.onrender.com";
+    }
+    return "http://localhost:3000";
+};
+
+export const API_URL = getApiUrl();
 
 export const useLeetCode = (authUser?: AuthUser | null) => {
     const [userData, setUserData] = useState<UserData[]>([]);

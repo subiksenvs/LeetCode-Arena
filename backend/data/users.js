@@ -2,11 +2,11 @@ const usernames = {
     "users": [
         {
             "username": "subiksenvs",
-            "name": "Subiksen",
-            "displayName": "Subiksen",
+            "name": "subiksen",
+            "displayName": "subiksen",
             "regNo": "160",
             "dept": "CSE",
-            "createdBy": "admin"
+            "createdBy": "subiksen"
         }
     ]
 };
