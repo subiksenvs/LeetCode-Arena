@@ -38,10 +38,22 @@ const extractLeetCodeUsername = (input: string): string => {
     return clean;
 };
 
+export interface ParsedExcelResult {
+    users: UserInput[];
+    detectedColumns: {
+        username: string | null;
+        name: string | null;
+        regNo: string | null;
+        dept: string | null;
+    };
+    totalRows: number;
+}
+
 /**
  * Parses an Excel or CSV file and accurately extracts ONLY { name, regNo, dept, username }
+ * Guarantees that no two fields map to the exact same column.
  */
-export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
+export const parseExcelFile = async (file: File): Promise<ParsedExcelResult> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
@@ -55,7 +67,7 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
 
                 const workbook = XLSX.read(data, { type: "array" });
                 if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                    throw new Error("The uploaded Excel workbook contains no sheets.");
+                    throw new Error("The uploaded Excel workbook contains no sheets. Please select a valid file.");
                 }
 
                 const firstSheetName = workbook.SheetNames[0];
@@ -63,50 +75,68 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                 const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
                 if (rawJson.length === 0) {
-                    throw new Error("The uploaded Excel sheet is empty.");
+                    throw new Error("The uploaded Excel sheet contains no data rows. Please select another file.");
                 }
 
-                const keys = Object.keys(rawJson[0]);
+                const allKeys = Object.keys(rawJson[0]);
+                const remainingKeys = new Set(allKeys);
 
-                // High-accuracy column matching
-                const findBestKey = (exactMatchers: string[], fuzzyMatchers: string[]): string | undefined => {
-                    // Pass 1: Check exact normalized match
-                    for (const key of keys) {
+                // Helper to claim the best matching key and remove it from remaining pool
+                const claimBestKey = (exactMatchers: string[], fuzzyMatchers: string[]): string | null => {
+                    // Pass 1: Exact match
+                    for (const key of remainingKeys) {
                         const norm = normalizeHeader(key);
-                        if (exactMatchers.includes(norm)) return key;
+                        if (exactMatchers.includes(norm)) {
+                            remainingKeys.delete(key);
+                            return key;
+                        }
                     }
-                    // Pass 2: Check fuzzy/substring match
-                    for (const key of keys) {
+                    // Pass 2: Fuzzy match
+                    for (const key of remainingKeys) {
                         const norm = normalizeHeader(key);
-                        if (fuzzyMatchers.some((f) => norm.includes(f))) return key;
+                        if (fuzzyMatchers.some((f) => norm.includes(f))) {
+                            remainingKeys.delete(key);
+                            return key;
+                        }
                     }
-                    return undefined;
+                    return null;
                 };
 
-                const usernameKey = findBestKey(
-                    ["leetcodeusername", "leetcodeid", "lchandle", "leetcodehandle", "username", "leetcode", "lcu", "lcid", "handle", "profile", "leetcodeurl", "user"],
+                // 1. Claim LeetCode Username first (highest priority)
+                const usernameKey = claimBestKey(
+                    ["leetcodeusername", "leetcodeid", "lchandle", "leetcodehandle", "username", "leetcode", "lcu", "lcid", "handle", "profile", "leetcodeurl"],
                     ["leetcode", "username", "handle"]
                 );
 
-                const nameKey = findBestKey(
-                    ["studentname", "name", "fullname", "nameofstudent", "studentfullname", "candidatename", "displayname", "nameofcandidate", "student"],
-                    ["name", "student"]
-                );
-
-                const regNoKey = findBestKey(
+                // 2. Claim Reg No
+                const regNoKey = claimBestKey(
                     ["regno", "registerno", "registernumber", "registrationno", "registrationnumber", "rollno", "rollnumber", "reg", "htno", "hallticket", "studentid", "idno", "roll"],
                     ["reg", "roll", "htno", "register"]
                 );
 
-                const deptKey = findBestKey(
+                // 3. Claim Department
+                const deptKey = claimBestKey(
                     ["department", "dept", "branch", "deptname", "departmentname", "stream", "course", "sec", "section"],
                     ["dept", "department", "branch", "stream"]
                 );
 
+                // 4. Claim Name (only from remaining unclaimed keys - never the same as username)
+                const nameKey = claimBestKey(
+                    ["studentname", "name", "fullname", "nameofstudent", "studentfullname", "candidatename", "displayname", "nameofcandidate", "student"],
+                    ["name", "student"]
+                );
+
+                if (!usernameKey) {
+                    const foundCols = allKeys.map(k => `"${k}"`).join(", ");
+                    throw new Error(
+                        `Could not find a required 'LeetCode Username' column in your sheet. Found columns: [${foundCols}]. Please ensure your file includes a column named 'LeetCode Username', 'Username', or 'Handle'.`
+                    );
+                }
+
                 const userMap = new Map<string, UserInput>();
 
                 for (const row of rawJson) {
-                    const rawUsername = usernameKey ? row[usernameKey]?.toString() || "" : "";
+                    const rawUsername = row[usernameKey]?.toString() || "";
                     const username = extractLeetCodeUsername(rawUsername);
 
                     // Skip rows without a valid username
@@ -116,7 +146,6 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                     const rawRegNo = regNoKey ? (row[regNoKey]?.toString() || "").trim() : "";
                     const rawDept = deptKey ? (row[deptKey]?.toString() || "").trim() : "";
 
-                    // Strictly extract only requested fields
                     const userRecord: UserInput = {
                         username: username,
                         name: rawName || username,
@@ -125,7 +154,6 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                         dept: rawDept,
                     };
 
-                    // Deduplicate within the file: matching username, or matching name + dept
                     const dedupKey = username.toLowerCase();
                     userMap.set(dedupKey, userRecord);
                 }
@@ -133,10 +161,19 @@ export const parseExcelFile = async (file: File): Promise<UserInput[]> => {
                 const users = Array.from(userMap.values());
 
                 if (users.length === 0) {
-                    throw new Error("No valid LeetCode usernames found. Please make sure your sheet has a column for 'LeetCode Username', 'Username', or 'Handle'.");
+                    throw new Error("No valid usernames could be extracted from the sheet. Please verify your file contents.");
                 }
 
-                resolve(users);
+                resolve({
+                    users,
+                    detectedColumns: {
+                        username: usernameKey,
+                        name: nameKey,
+                        regNo: regNoKey,
+                        dept: deptKey,
+                    },
+                    totalRows: rawJson.length,
+                });
             } catch (err: any) {
                 reject(err);
             }
