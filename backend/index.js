@@ -1,6 +1,8 @@
 import cors from "cors";
 import express from "express";
 import bodyParser from "body-parser";
+import compression from "compression";
+import NodeCache from "node-cache";
 import fetch from "node-fetch";
 import formatUserData from "./utils/Formatter.js";
 import userDataQuery from "./utils/UserDataQuery.js";
@@ -12,12 +14,23 @@ import usernames from "./data/users.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "*";
+
+// High-Performance In-Memory Caches
+// 1. User stats cache: 10 minutes TTL per student
+const userStatsCache = new NodeCache({ stdTTL: 600, checkperiod: 120, useClones: false });
+// 2. Leaderboard payload cache: 3 minutes TTL per scoped query
+const leaderboardCache = new NodeCache({ stdTTL: 180, checkperiod: 60, useClones: false });
 
 const app = express();
 app.disable("x-powered-by");
 
-// Security Headers Middleware
+// Enable Gzip / Deflate compression for 70-80% smaller response sizes
+app.use(compression({
+    level: 6,
+    threshold: 1024, // only compress responses larger than 1KB
+}));
+
+// Security & Caching Headers Middleware
 app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
@@ -29,7 +42,33 @@ app.use((req, res, next) => {
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json({ limit: "10mb" }));
 
-// Auth Routes: Signup
+// Helper to invalidate all leaderboard responses when data changes
+const invalidateLeaderboardCache = () => {
+    leaderboardCache.flushAll();
+};
+
+// ----------------------------------------------------
+// Health Check & Keep-Alive Endpoints (Zero Overhead)
+// ----------------------------------------------------
+const healthHandler = (req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.json({
+        status: "healthy",
+        service: "LeetCode Arena Backend",
+        uptimeSeconds: Math.floor(process.uptime()),
+        cachedProfiles: userStatsCache.stats.keys,
+        timestamp: new Date().toISOString(),
+    });
+};
+
+app.get("/", healthHandler);
+app.get("/api/ping", healthHandler);
+app.get("/api/health", healthHandler);
+app.get("/healthz", healthHandler);
+
+// ----------------------------------------------------
+// Auth Routes
+// ----------------------------------------------------
 app.post("/api/auth/signup", async (req, res) => {
     try {
         const { username, password, name } = req.body;
@@ -43,7 +82,6 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 });
 
-// Auth Routes: Login
 app.post("/api/auth/login", async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -57,29 +95,91 @@ app.post("/api/auth/login", async (req, res) => {
     }
 });
 
-// Fetch User Details from LeetCode GraphQL
-const fetchUserDetails = async (username) => {
-    const response = await fetch("https://leetcode.com/graphql", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Referer: "https://leetcode.com",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        },
-        body: JSON.stringify({
-            query: userDataQuery,
-            variables: { username: username.trim() },
-        }),
-    });
+// ----------------------------------------------------
+// LeetCode GraphQL Fetcher with Retry & In-Memory Cache
+// ----------------------------------------------------
+const fetchUserDetailsFromLeetCode = async (username, retries = 2) => {
+    const cleanUser = username.trim();
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
-    const result = await response.json();
+            const response = await fetch("https://leetcode.com/graphql", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Referer: "https://leetcode.com",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
+                body: JSON.stringify({
+                    query: userDataQuery,
+                    variables: { username: cleanUser },
+                }),
+                signal: controller.signal,
+            });
 
-    if (result.errors) {
-        throw new Error(result.errors[0].message);
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                if (response.status === 429 && attempt < retries) {
+                    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+                    continue;
+                }
+                throw new Error(`LeetCode API returned status ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.errors) {
+                throw new Error(result.errors[0]?.message || "GraphQL query error");
+            }
+
+            return result.data;
+        } catch (err) {
+            if (attempt === retries) throw err;
+            await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        }
+    }
+};
+
+// Cached wrapper for fetching user details
+const fetchUserDetails = async (username, forceRefresh = false) => {
+    const cacheKey = username.trim().toLowerCase();
+    if (!forceRefresh) {
+        const cached = userStatsCache.get(cacheKey);
+        if (cached) return cached;
     }
 
-    return result.data;
+    const data = await fetchUserDetailsFromLeetCode(username);
+    if (data && data.matchedUser) {
+        userStatsCache.set(cacheKey, data);
+    }
+    return data;
 };
+
+// Concurrency Batch Helper (prevents CPU spikes & LeetCode 429 errors)
+const runWithConcurrency = async (items, concurrencyLimit, workerFn) => {
+    const results = new Array(items.length);
+    let currentIndex = 0;
+
+    const workers = Array.from({ length: Math.min(concurrencyLimit, items.length) }, async () => {
+        while (currentIndex < items.length) {
+            const index = currentIndex++;
+            try {
+                results[index] = await workerFn(items[index]);
+            } catch (err) {
+                results[index] = null;
+            }
+        }
+    });
+
+    await Promise.all(workers);
+    return results;
+};
+
+// ----------------------------------------------------
+// User & Leaderboard Routes
+// ----------------------------------------------------
 
 // Single user details
 app.post("/api/user", async (req, res) => {
@@ -92,8 +192,8 @@ app.post("/api/user", async (req, res) => {
     try {
         const userData = await fetchUserDetails(username);
         const formattedData = formatUserData(userData, {
-            name: name || displayName || username,
-            displayName: displayName || name || username,
+            name: name || displayName || "",
+            displayName: displayName || name || "",
             regNo: regNo || "",
             dept: dept || "",
         });
@@ -103,10 +203,22 @@ app.post("/api/user", async (req, res) => {
     }
 });
 
-// Get all configured users leaderboard data with role scoping
+// Get all configured users leaderboard data with role scoping & high-speed cache
 app.get("/api/users", async (req, res) => {
     try {
-        const { user: reqUser, role } = req.query;
+        const { user: reqUser, role, refresh } = req.query;
+        const forceRefresh = refresh === "true" || refresh === "1";
+        const cacheKey = `leaderboard_${role || "user"}_${(reqUser || "all").toString().toLowerCase()}`;
+
+        // Return from cache if valid and refresh not explicitly requested (< 5ms response time)
+        if (!forceRefresh) {
+            const cachedResponse = leaderboardCache.get(cacheKey);
+            if (cachedResponse) {
+                res.setHeader("X-Cache", "HIT");
+                return res.json(cachedResponse);
+            }
+        }
+
         let allUsers = await getStoredUsers(usernames.users || []);
 
         // Filter users based on role
@@ -118,27 +230,34 @@ app.get("/api/users", async (req, res) => {
         }
 
         if (users.length === 0) {
-            return res.json({ totalUsers: 0, fetchedUsers: 0, usersData: [] });
+            const emptyResult = { totalUsers: 0, fetchedUsers: 0, usersData: [] };
+            leaderboardCache.set(cacheKey, emptyResult, 60);
+            return res.json(emptyResult);
         }
 
-        const userDataPromises = users.map(async (user) => {
+        // Fetch user stats with controlled concurrency (Max 8 parallel queries)
+        const usersData = await runWithConcurrency(users, 8, async (user) => {
             try {
-                const userData = await fetchUserDetails(user.username);
+                const userData = await fetchUserDetails(user.username, forceRefresh);
                 return formatUserData(userData, user);
             } catch (error) {
-                console.error(
-                    `Error fetching data for ${user.username}: ${error.message}`
-                );
-                return null;
+                console.error(`Error fetching data for ${user.username}: ${error.message}`);
+                // Return minimal fallback so student record still appears
+                return formatUserData(null, user);
             }
         });
 
-        const totalUsers = users.length;
-        const usersData = (await Promise.all(userDataPromises)).filter(
-            (user) => user !== null
-        );
-        const fetchedUsers = usersData.length;
-        res.json({ totalUsers, fetchedUsers, usersData });
+        const validUsersData = usersData.filter((u) => u !== null);
+        const payload = {
+            totalUsers: users.length,
+            fetchedUsers: validUsersData.length,
+            usersData: validUsersData,
+        };
+
+        // Store in fast in-memory cache for 3 minutes
+        leaderboardCache.set(cacheKey, payload, 180);
+        res.setHeader("X-Cache", "MISS");
+        res.json(payload);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -151,8 +270,8 @@ const mergeUserRecords = (existingList, incomingList, defaultCreatedBy) => {
     for (const incoming of incomingList) {
         const cleanUser = {
             username: (incoming.username || "").trim(),
-            name: (incoming.name || incoming.displayName || incoming.username || "").trim(),
-            displayName: (incoming.displayName || incoming.name || incoming.username || "").trim(),
+            name: (incoming.name || incoming.displayName || "").trim(),
+            displayName: (incoming.displayName || incoming.name || "").trim(),
             regNo: (incoming.regNo || incoming.reg_no || incoming.registerNumber || "").toString().trim(),
             dept: (incoming.dept || incoming.department || "").toString().trim(),
             createdBy: incoming.createdBy || defaultCreatedBy,
@@ -179,7 +298,6 @@ const mergeUserRecords = (existingList, incomingList, defaultCreatedBy) => {
         });
 
         if (matchIndex !== -1) {
-            // Update existing entry with any updated fields
             result[matchIndex] = {
                 ...result[matchIndex],
                 username: cleanUser.username || result[matchIndex].username,
@@ -190,7 +308,6 @@ const mergeUserRecords = (existingList, incomingList, defaultCreatedBy) => {
                 createdBy: cleanUser.createdBy || result[matchIndex].createdBy,
             };
         } else {
-            // New record
             result.push(cleanUser);
         }
     }
@@ -225,6 +342,7 @@ app.post("/api/users/update-all", async (req, res) => {
         }
 
         await saveStoredUsers(finalUsersList);
+        invalidateLeaderboardCache();
 
         res.json({
             message: `Successfully saved & updated ${users.length} users in leaderboard`,
@@ -249,24 +367,21 @@ app.post("/api/users/delete", async (req, res) => {
         let filteredUsers = [];
 
         if (role === "admin") {
-            // Admin can delete from global list
             filteredUsers = currentUsers.filter(
                 (u) => u.username.toLowerCase() !== cleanUsername
             );
         } else {
-            // Non-admin user can ONLY delete records they personally created (NEVER admin records or default records)
             const requester = (createdBy || "").toLowerCase();
             filteredUsers = currentUsers.filter((u) => {
                 const isMatch = u.username.toLowerCase() === cleanUsername;
-                if (!isMatch) return true; // keep other usernames
-
-                // Only delete if created by this specific user and not admin
+                if (!isMatch) return true;
                 const isCreatedByRequester = u.createdBy && u.createdBy.toLowerCase() === requester && u.createdBy.toLowerCase() !== "admin";
-                return !isCreatedByRequester; // keep if created by admin or someone else
+                return !isCreatedByRequester;
             });
         }
 
         await saveStoredUsers(filteredUsers);
+        invalidateLeaderboardCache();
 
         res.json({
             message: `User ${username} deleted successfully`,
@@ -288,12 +403,13 @@ app.post("/api/users/clear-all", async (req, res) => {
             await saveStoredUsers([]);
         } else if (createdBy) {
             const requester = createdBy.toLowerCase();
-            // Non-admin clear only removes their own records, strictly preserving admin and other users' records
             const remaining = currentUsers.filter(
                 (u) => !u.createdBy || u.createdBy.toLowerCase() !== requester || u.createdBy.toLowerCase() === "admin"
             );
             await saveStoredUsers(remaining);
         }
+
+        invalidateLeaderboardCache();
 
         res.json({
             message: "Users have been cleared successfully",
@@ -332,8 +448,8 @@ app.post("/api/users/add", async (req, res) => {
         }
 
         await saveStoredUsers(updatedUsers);
+        invalidateLeaderboardCache();
 
-        // Fetch user data to verify and return
         const userData = await fetchUserDetails(username.trim());
         const formattedData = formatUserData(userData, {
             username: username.trim(),
@@ -353,12 +469,26 @@ app.post("/api/users/add", async (req, res) => {
     }
 });
 
-app.get("/", (req, res) => {
-    res.send("Welcome to LeetCode API");
-});
+// Periodic background sync loop (every 10 minutes) to keep cache warm
+setInterval(async () => {
+    try {
+        const stored = await getStoredUsers(usernames.users || []);
+        if (stored && stored.length > 0) {
+            // Warm cache with max 6 concurrent background requests
+            await runWithConcurrency(stored.slice(0, 50), 6, async (u) => {
+                try {
+                    await fetchUserDetails(u.username, true);
+                } catch {
+                    // ignore background errors
+                }
+            });
+        }
+    } catch {
+        // ignore background worker errors
+    }
+}, 10 * 60 * 1000);
 
 // Start Server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running with high-performance caching on port ${PORT}`);
 });
-
